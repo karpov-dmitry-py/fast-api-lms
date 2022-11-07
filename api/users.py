@@ -1,37 +1,33 @@
 from typing import Optional, List
+from sqlalchemy.orm import Session
+
 import fastapi
-from fastapi import Path, Query
-from pydantic import BaseModel
+from fastapi import Path, Query, Depends, HTTPException
+
+from schemas.user import User, UserCreate
+from api.service.users import get_user_by_id, get_user_by_email, get_users, create_user
+from db.db_setup import get_db
 
 router = fastapi.APIRouter()
 
 
-class User(BaseModel):
-    email: str
-    is_active: bool
-    bio: Optional[str]
-
-
-users = [
-    User(email='u1@', is_active=True, bio='u1 bio'),
-    User(email='u2@', is_active=False, bio='u2 bio'),
-    User(email='u3@', is_active=False, bio='u3 bio here'),
-]
-
-
 @router.get("/users", response_model=List[User])
-async def get_users():
-    return users
+async def fetch_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return get_users(db, skip, limit)
 
 
-@router.post("/users")
-async def create_user(user: User):
-    users.append(user)
-    return user.email
+@router.post("/users", response_model=User, status_code=201)
+async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = get_user_by_email(db, user.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail=f'user with email {user.email} already exists in db')
+
+    return create_user(db, user)
 
 
-@router.get("/users/{user_id}")
-async def get_user(
-        user_id: int = Path(..., description='user id is expected here'),
-        q: str = Query(None, max_length=5)):
-    return {"user": users[user_id], "q": q}
+@router.get("/users/{user_id}", response_model=User)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    existing_user = get_user_by_id(db, user_id)
+    if existing_user is None:
+        raise HTTPException(status_code=404, detail=f'user with id {user_id} not found in db')
+    return existing_user

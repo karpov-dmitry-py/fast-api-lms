@@ -9,13 +9,13 @@ async def read_courses():
 
 
 @router.post("/courses")
-async def create_course_api():
+async def create_course():
     return {"courses": []}
 
 
 @router.get("/courses/{id}")
 async def read_course():
-    return {"courses": []}
+    return {"course": None}
 
 
 @router.patch("/courses/{id}")
@@ -30,4 +30,4 @@ async def delete_course():
 
 @router.get("/courses/{id}/sections")
 async def read_course_sections():
-    return {"courses": []}
+    return {"sections": []}
